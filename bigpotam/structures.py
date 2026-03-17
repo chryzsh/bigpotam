@@ -17,6 +17,7 @@ from impacket.dcerpc.v5.ndr import NDRCALL, NDRSTRUCT
 # MS-EFSR structures
 # =============================================================================
 
+
 class EXIMPORT_CONTEXT_HANDLE(NDRSTRUCT):
     align = 1
     structure = (("Data", "20s"),)
@@ -92,6 +93,7 @@ class ENCRYPTION_CERTIFICATE_LIST(NDRSTRUCT):
 
 
 # --- EFSR NDRCALL classes ---
+
 
 class EfsRpcOpenFileRaw(NDRCALL):
     opnum = 0
@@ -231,6 +233,7 @@ class EfsRpcFileKeyInfoExResponse(NDRCALL):
 # MS-RPRN structures (opnum 62 - custom, not in impacket)
 # =============================================================================
 
+
 class PRINTER_HANDLE(NDRSTRUCT):
     structure = (("Data", '20s=b""'),)
 
@@ -259,6 +262,7 @@ class RpcRemoteFindFirstPrinterChangeNotificationResponse(NDRCALL):
 # MS-FSRVP structures
 # =============================================================================
 
+
 class IsPathSupported(NDRCALL):
     opnum = 8
     structure = (("ShareName", WSTR),)
@@ -280,6 +284,7 @@ class IsPathShadowCopiedResponse(NDRCALL):
 # =============================================================================
 # MS-DFSNM structures
 # =============================================================================
+
 
 class NetrDfsAddStdRoot(NDRCALL):
     opnum = 12

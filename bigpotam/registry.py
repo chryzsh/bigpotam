@@ -1,5 +1,13 @@
 """Method registry — ordered list of all coercion methods."""
 
+from bigpotam.methods.dfsnm import (
+    trigger_add_root_target,
+    trigger_add_std_root,
+    trigger_add_std_root_forced,
+    trigger_manager_initialize,
+    trigger_remove_root_target,
+    trigger_remove_std_root,
+)
 from bigpotam.methods.efsr import (
     trigger_add_users_to_file,
     trigger_add_users_to_file_ex,
@@ -13,24 +21,16 @@ from bigpotam.methods.efsr import (
     trigger_query_users_on_file,
     trigger_remove_users_from_file,
 )
+from bigpotam.methods.even import trigger_elfr_open_belw
+from bigpotam.methods.fsrvp import (
+    trigger_is_path_shadow_copied,
+    trigger_is_path_supported,
+)
 from bigpotam.methods.rprn import (
     trigger_par_async_open_printer,
     trigger_rprn_notification,
     trigger_rprn_notification_ex,
 )
-from bigpotam.methods.dfsnm import (
-    trigger_add_root_target,
-    trigger_add_std_root,
-    trigger_add_std_root_forced,
-    trigger_manager_initialize,
-    trigger_remove_root_target,
-    trigger_remove_std_root,
-)
-from bigpotam.methods.fsrvp import (
-    trigger_is_path_shadow_copied,
-    trigger_is_path_supported,
-)
-from bigpotam.methods.even import trigger_elfr_open_belw
 
 # UUIDs
 EFSR_UUID_LSARPC = ("c681d488-d850-11d0-8c52-00c04fd90f7e", "1.0")
@@ -68,11 +68,14 @@ METHODS = [
     _efsr_method("EfsRpcRemoveUsersFromFile", trigger_remove_users_from_file, 8),
     _efsr_method("EfsRpcAddUsersToFile", trigger_add_users_to_file, 9),
     _efsr_method("EfsRpcFileKeyInfo", trigger_file_key_info, 12),
-    _efsr_method("EfsRpcDuplicateEncryptionInfoFile", trigger_duplicate_encryption_info_file, 13),
+    _efsr_method(
+        "EfsRpcDuplicateEncryptionInfoFile",
+        trigger_duplicate_encryption_info_file,
+        13,
+    ),
     _efsr_method("EfsRpcAddUsersToFileEx", trigger_add_users_to_file_ex, 15),
     _efsr_method("EfsRpcFileKeyInfoEx", trigger_file_key_info_ex, 16),
     _efsr_method("EfsRpcOpenFileRaw", trigger_open_file_raw, 0),  # patched — try last
-
     # --- MS-RPRN via spoolss ---
     {
         "protocol": "MS-RPRN",
@@ -100,7 +103,6 @@ METHODS = [
         "connection_type": "rpc",
         "needs_target_name": True,
     },
-
     # --- MS-RPRN via EPM/TCP dynamic endpoint ---
     {
         "protocol": "MS-RPRN",
@@ -115,7 +117,6 @@ METHODS = [
         "connection_type": "rpc_epm",
         "needs_target_name": True,
     },
-
     # --- MS-PAR ---
     {
         "protocol": "MS-PAR",
@@ -129,7 +130,6 @@ METHODS = [
         "requires_efs_activation": False,
         "connection_type": "rpc",
     },
-
     # --- MS-DFSNM ---
     {
         "protocol": "MS-DFSNM",
@@ -203,7 +203,6 @@ METHODS = [
         "requires_efs_activation": False,
         "connection_type": "rpc",
     },
-
     # --- MS-FSRVP ---
     {
         "protocol": "MS-FSRVP",
@@ -229,7 +228,6 @@ METHODS = [
         "requires_efs_activation": False,
         "connection_type": "rpc",
     },
-
     # --- MS-EVEN ---
     {
         "protocol": "MS-EVEN",
@@ -243,7 +241,6 @@ METHODS = [
         "requires_efs_activation": False,
         "connection_type": "rpc",
     },
-
     # --- MS-WSP (handled separately — not RPC) ---
     {
         "protocol": "MS-WSP",
@@ -257,7 +254,6 @@ METHODS = [
         "requires_efs_activation": False,
         "connection_type": "wsp",
     },
-
     # --- DCOM UpdateSession (handled separately — not named pipe) ---
     {
         "protocol": "DCOM",

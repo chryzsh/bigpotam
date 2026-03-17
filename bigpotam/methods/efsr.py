@@ -4,9 +4,9 @@ import logging
 
 from bigpotam.paths import efsr_path
 from bigpotam.structures import (
+    EFS_RPC_BLOB,
     ENCRYPTION_CERTIFICATE_HASH_LIST,
     ENCRYPTION_CERTIFICATE_LIST,
-    EFS_RPC_BLOB,
     EfsRpcAddUsersToFile,
     EfsRpcAddUsersToFileEx,
     EfsRpcDecryptFileSrv,

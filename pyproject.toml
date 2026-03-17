@@ -1,0 +1,29 @@
+[project]
+name = "bigpotam"
+version = "1.0.0"
+description = "Unified NTLM authentication coercion tool"
+requires-python = ">=3.10"
+dependencies = [
+    "impacket>=0.11.0",
+]
+
+[project.scripts]
+bigpotam = "bigpotam:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP", "RUF"]
+ignore = [
+    "UP007",  # X | Y union syntax — keep Optional for impacket compat
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bigpotam"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_configs = true

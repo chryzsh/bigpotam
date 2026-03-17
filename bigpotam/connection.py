@@ -44,9 +44,22 @@ def get_dynamic_endpoint(interface_uuid, target, timeout=5):
     return result
 
 
-def connect_rpc(target, pipe, uuid_tuple, target_ip=None, port=445,
-                username="", password="", domain="", lmhash="", nthash="",
-                do_kerberos=False, dc_host=None, timeout=5, use_epm=False):
+def connect_rpc(
+    target,
+    pipe,
+    uuid_tuple,
+    target_ip=None,
+    port=445,
+    username="",
+    password="",
+    domain="",
+    lmhash="",
+    nthash="",
+    do_kerberos=False,
+    dc_host=None,
+    timeout=5,
+    use_epm=False,
+):
     """Connect to an RPC endpoint via named pipe or EPM dynamic endpoint.
 
     Returns a connected and bound DCE/RPC session, or None on failure.
@@ -93,13 +106,24 @@ def connect_rpc(target, pipe, uuid_tuple, target_ip=None, port=445,
         return dce
 
     except Exception as e:
-        log.debug("Connection failed [%s]: %s", pipe if not use_epm else "dcerpc", e)
+        label = "dcerpc" if use_epm else pipe
+        log.debug("Connection failed [%s]: %s", label, e)
         return None
 
 
-def connect_smb(target, target_ip=None, port=445, username="", password="",
-                domain="", lmhash="", nthash="", do_kerberos=False,
-                dc_host=None, timeout=5):
+def connect_smb(
+    target,
+    target_ip=None,
+    port=445,
+    username="",
+    password="",
+    domain="",
+    lmhash="",
+    nthash="",
+    do_kerberos=False,
+    dc_host=None,
+    timeout=5,
+):
     """Create an SMB connection for WSP (returns smbClient or None)."""
     try:
         from impacket.smbconnection import SMBConnection
@@ -113,7 +137,12 @@ def connect_smb(target, target_ip=None, port=445, username="", password="",
 
         if do_kerberos:
             smb.kerberosLogin(
-                username, password, domain, lmhash, nthash, kdcHost=dc_host,
+                username,
+                password,
+                domain,
+                lmhash,
+                nthash,
+                kdcHost=dc_host,
             )
         else:
             smb.login(username, password, domain, lmhash, nthash)

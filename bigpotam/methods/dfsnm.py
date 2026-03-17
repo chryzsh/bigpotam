@@ -59,7 +59,7 @@ def trigger_manager_initialize(dce, listener, listener_port=445, **kw):
     """NetrDfsManagerInitialize — SMB only, no WebDAV variant."""
     try:
         request = NetrDfsManagerInitialize()
-        request["ServerName"] = "%s\x00" % listener
+        request["ServerName"] = f"{listener}\x00"
         request["Flags"] = 0
         dce.request(request)
         return True
@@ -74,7 +74,7 @@ def trigger_add_std_root_forced(dce, listener, listener_port=445, **kw):
     """NetrDfsAddStdRootForced — SMB only, no WebDAV variant."""
     try:
         request = NetrDfsAddStdRootForced()
-        request["ServerName"] = "%s\x00" % listener
+        request["ServerName"] = f"{listener}\x00"
         request["RootShare"] = "test\x00"
         request["Comment"] = "test\x00"
         request["Share"] = "x:\\test\x00"

