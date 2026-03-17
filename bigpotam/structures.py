@@ -1,5 +1,6 @@
 """NDR structure definitions for all supported coercion protocols."""
 
+from impacket import system_errors
 from impacket.dcerpc.v5.dtypes import (
     BOOL,
     DWORD,
@@ -12,6 +13,28 @@ from impacket.dcerpc.v5.dtypes import (
     WSTR,
 )
 from impacket.dcerpc.v5.ndr import NDRCALL, NDRSTRUCT
+from impacket.dcerpc.v5.rpcrt import DCERPCException
+
+
+class DCERPCSessionError(DCERPCException):
+    """Maps Win32 error codes to human-readable names.
+
+    Impacket's NDRCALL machinery looks for this class in the module
+    where request structures are defined. Without it, RPC error
+    responses raise a bare AttributeError instead of a proper exception
+    with error_code and named error strings.
+    """
+
+    def __init__(self, error_string=None, error_code=None, packet=None):
+        DCERPCException.__init__(self, error_string, error_code, packet)
+
+    def __str__(self):
+        key = self.error_code
+        if key in system_errors.ERROR_MESSAGES:
+            short, verbose = system_errors.ERROR_MESSAGES[key]
+            return f"SessionError: 0x{key:08x} - {short} - {verbose}"
+        return f"SessionError: unknown error code: 0x{key:08x}"
+
 
 # =============================================================================
 # MS-EFSR structures
