@@ -2,6 +2,7 @@
 
 import logging
 
+from bigpotam.methods import check_error
 from bigpotam.paths import efsr_path
 from bigpotam.structures import (
     EFS_RPC_BLOB,
@@ -22,12 +23,12 @@ from bigpotam.structures import (
 
 log = logging.getLogger("bigpotam")
 
-SUCCESS_CODES = ("ERROR_BAD_NETPATH", "ERROR_INVALID_NAME")
+_SUCCESS_CODES = {0x00000035, 0x0000007B}  # ERROR_BAD_NETPATH, ERROR_INVALID_NAME
+_SUCCESS_STRINGS = ("ERROR_BAD_NETPATH", "ERROR_INVALID_NAME")
 
 
 def _check_success(e):
-    err = str(e)
-    return any(code in err for code in SUCCESS_CODES)
+    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
 def trigger_open_file_raw(dce, listener, listener_port=445, **kw):

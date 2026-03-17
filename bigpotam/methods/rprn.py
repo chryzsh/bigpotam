@@ -5,17 +5,23 @@ import logging
 from impacket.dcerpc.v5 import rprn
 from impacket.dcerpc.v5.dtypes import NULL
 
+from bigpotam.methods import check_error
 from bigpotam.paths import rprn_path
 from bigpotam.structures import RpcRemoteFindFirstPrinterChangeNotification
 
 log = logging.getLogger("bigpotam")
 
-SUCCESS_CODES = ("rpc_s_access_denied", "RPC_S_SERVER_UNAVAILABLE", "ERROR_BAD_NETPATH")
+# rpc_s_access_denied=0x05, ERROR_BAD_NETPATH=0x35, RPC_S_SERVER_UNAVAILABLE=0x6BA
+_SUCCESS_CODES = {0x00000005, 0x00000035, 0x000006BA}
+_SUCCESS_STRINGS = (
+    "rpc_s_access_denied",
+    "RPC_S_SERVER_UNAVAILABLE",
+    "ERROR_BAD_NETPATH",
+)
 
 
 def _check_success(e):
-    err = str(e)
-    return any(code in err for code in SUCCESS_CODES)
+    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
 def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **kw):

@@ -4,6 +4,7 @@ import logging
 
 from impacket.dcerpc.v5.dtypes import NULL
 
+from bigpotam.methods import check_error
 from bigpotam.paths import dfsnm_dfs_path, dfsnm_path
 from bigpotam.structures import (
     NetrDfsAddRootTarget,
@@ -16,12 +17,17 @@ from bigpotam.structures import (
 
 log = logging.getLogger("bigpotam")
 
-SUCCESS_CODES = ("rpc_s_access_denied", "ERROR_BAD_NETPATH", "RPC_S_INVALID_NET_ADDR")
+# rpc_s_access_denied=0x05, ERROR_BAD_NETPATH=0x35, RPC_S_INVALID_NET_ADDR=0x6AB
+_SUCCESS_CODES = {0x00000005, 0x00000035, 0x000006AB}
+_SUCCESS_STRINGS = (
+    "rpc_s_access_denied",
+    "ERROR_BAD_NETPATH",
+    "RPC_S_INVALID_NET_ADDR",
+)
 
 
 def _check_success(e):
-    err = str(e)
-    return any(code in err for code in SUCCESS_CODES)
+    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
 def trigger_add_std_root(dce, listener, listener_port=445, **kw):

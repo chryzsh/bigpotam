@@ -2,17 +2,18 @@
 
 import logging
 
+from bigpotam.methods import check_error
 from bigpotam.paths import fsrvp_path
 from bigpotam.structures import IsPathShadowCopied, IsPathSupported
 
 log = logging.getLogger("bigpotam")
 
-SUCCESS_CODES = ("rpc_s_access_denied", "ERROR_BAD_NETPATH")
+_SUCCESS_CODES = {0x00000005, 0x00000035}  # rpc_s_access_denied, ERROR_BAD_NETPATH
+_SUCCESS_STRINGS = ("rpc_s_access_denied", "ERROR_BAD_NETPATH")
 
 
 def _check_success(e):
-    err = str(e)
-    return any(code in err for code in SUCCESS_CODES)
+    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
 def trigger_is_path_supported(dce, listener, listener_port=445, **kw):

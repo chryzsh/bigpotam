@@ -7,9 +7,13 @@ import string
 from impacket.dcerpc.v5 import even
 from impacket.dcerpc.v5.dtypes import NULL
 
+from bigpotam.methods import check_error
+
 log = logging.getLogger("bigpotam")
 
-SUCCESS_CODES = (
+# ERROR_BAD_NETPATH=0x35, STATUS_OBJECT_PATH_NOT_FOUND=0xC000003A (NTSTATUS)
+_SUCCESS_CODES = {0x00000035, 0xC000003A}
+_SUCCESS_STRINGS = (
     "ERROR_BAD_NETPATH",
     "STATUS_OBJECT_PATH_NOT_FOUND",
     "STATUS_CONNECTION_DISCONNECTED",
@@ -17,8 +21,7 @@ SUCCESS_CODES = (
 
 
 def _check_success(e):
-    err = str(e)
-    return any(code in err for code in SUCCESS_CODES)
+    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
 def _rnd(n=8):
