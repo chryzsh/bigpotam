@@ -208,6 +208,8 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
 
     if args.all_pipes and method["protocol"] == "MS-EFSR":
         pipes = method["all_pipes"]
+    elif "default_pipes" in method:
+        pipes = method["default_pipes"]
     else:
         pipes = [method["pipe"]]
 
@@ -216,7 +218,7 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
     for pipe in pipes:
         pipe_key = (method["protocol"], pipe)
 
-        if pipe_key in failed_pipes and method["protocol"] != "MS-EFSR":
+        if pipe_key in failed_pipes:
             log.debug(
                 "Skipping %s (pipe %s previously failed)",
                 method["name"],
@@ -244,7 +246,6 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
             **auth_kw,
         )
         if dce is None:
-            log.info("  Connection failed")
             failed_pipes.add(pipe_key)
             continue
 

@@ -107,7 +107,7 @@ def connect_rpc(
 
     except Exception as e:
         label = "dcerpc" if use_epm else pipe
-        log.debug("Connection failed [%s]: %s", label, e)
+        log.info("  Connection failed [%s]: %s", label, e)
         return None
 
 
