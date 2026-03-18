@@ -4,8 +4,10 @@ import logging
 
 from impacket.dcerpc.v5 import epm, transport
 from impacket.dcerpc.v5.rpcrt import (
+    DCERPCException,
     RPC_C_AUTHN_GSS_NEGOTIATE,
     RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+    RPC_C_AUTHN_LEVEL_NONE,
     RPC_C_AUTHN_WINNT,
 )
 from impacket.uuid import uuidtup_to_bin
@@ -17,22 +19,132 @@ def _is_tcp_pipe(pipe):
     return pipe in {"tcp_lsarpc", "tcp_efsr"}
 
 
-def activate_efs(target, timeout=2):
-    """Poke EPM on port 135 to trigger on-demand EFS service start.
+def _set_transport_auth(
+    rpctransport,
+    target_ip=None,
+    port=445,
+    set_dport=True,
+    username="",
+    password="",
+    domain="",
+    lmhash="",
+    nthash="",
+    do_kerberos=False,
+    dc_host=None,
+):
+    if target_ip:
+        rpctransport.setRemoteHost(target_ip)
 
-    The exception is the success condition — this is the rpc2efs trick.
-    Silently ignored if port 135 is filtered.
-    """
-    EFS_UUID = uuidtup_to_bin(("df1941c5-fe89-4e79-bf10-463657acf44d", "0.0"))
+    if set_dport:
+        rpctransport.set_dport(port)
+
+    if hasattr(rpctransport, "set_credentials"):
+        rpctransport.set_credentials(
+            username=username,
+            password=password,
+            domain=domain,
+            lmhash=lmhash,
+            nthash=nthash,
+        )
+
+    if do_kerberos:
+        rpctransport.set_kerberos(True, kdcHost=dc_host)
+
+
+def _activate_efs_named_pipe(
+    target,
+    pipe,
+    target_ip=None,
+    port=445,
+    username="",
+    password="",
+    domain="",
+    lmhash="",
+    nthash="",
+    do_kerberos=False,
+    dc_host=None,
+    timeout=2,
+):
+    efs_uuid = uuidtup_to_bin(("df1941c5-fe89-4e79-bf10-463657acf44d", "1.0"))
+    string_binding = rf"ncacn_np:{target}[\PIPE\{pipe}]"
+    rpctransport = transport.DCERPCTransportFactory(string_binding)
+    rpctransport.set_connect_timeout(timeout)
+    _set_transport_auth(
+        rpctransport,
+        target_ip=target_ip,
+        port=port,
+        username=username,
+        password=password,
+        domain=domain,
+        lmhash=lmhash,
+        nthash=nthash,
+        do_kerberos=do_kerberos,
+        dc_host=dc_host,
+    )
+
+    dce = rpctransport.get_dce_rpc()
+    dce.set_auth_level(RPC_C_AUTHN_LEVEL_NONE)
+
     try:
-        string_binding = f"ncacn_ip_tcp:{target}[135]"
+        dce.connect()
+        dce.bind(efs_uuid)
+        dce.disconnect()
+        return True
+    except DCERPCException as e:
+        log.debug("EFS activation via %s returned DCERPCException: %s", pipe, e)
+        return True
+    except Exception as e:
+        log.debug("EFS activation via %s failed: %s", pipe, e)
+        return False
+
+
+def activate_efs(
+    target,
+    target_ip=None,
+    port=445,
+    username="",
+    password="",
+    domain="",
+    lmhash="",
+    nthash="",
+    do_kerberos=False,
+    dc_host=None,
+    timeout=2,
+):
+    """Trigger on-demand EFS service start.
+
+    Prefer named-pipe probes over SMB because they are more reliable through
+    SOCKS/proxychains setups, then fall back to the original EPM/135 poke.
+    """
+    for pipe in ("efsrpc", "lsarpc"):
+        if _activate_efs_named_pipe(
+            target,
+            pipe,
+            target_ip=target_ip,
+            port=port,
+            username=username,
+            password=password,
+            domain=domain,
+            lmhash=lmhash,
+            nthash=nthash,
+            do_kerberos=do_kerberos,
+            dc_host=dc_host,
+            timeout=timeout,
+        ):
+            return
+
+    EFS_UUID = uuidtup_to_bin(("df1941c5-fe89-4e79-bf10-463657acf44d", "0.0"))
+    network_target = target_ip or target
+    try:
+        string_binding = f"ncacn_ip_tcp:{network_target}[135]"
         rpctransport = transport.DCERPCTransportFactory(string_binding)
         rpctransport.set_connect_timeout(timeout)
         dce = rpctransport.get_dce_rpc()
         dce.connect()
-        epm.hept_map(target, EFS_UUID, protocol="ncacn_ip_tcp", dce=dce)
+        epm.hept_map(network_target, EFS_UUID, protocol="ncacn_ip_tcp", dce=dce)
         dce.disconnect()
-    except Exception:
+    except Exception as e:
+        log.debug("EFS activation via EPM failed: %s", e)
         pass
 
 
@@ -85,23 +197,20 @@ def connect_rpc(
         rpctransport = transport.DCERPCTransportFactory(string_binding)
         rpctransport.set_connect_timeout(timeout)
 
-        if not use_epm and not is_tcp_pipe:
-            rpctransport.set_dport(port)
-
-        if target_ip:
-            rpctransport.setRemoteHost(target_ip)
-
-        if hasattr(rpctransport, "set_credentials"):
-            rpctransport.set_credentials(
+        if not use_epm:
+            _set_transport_auth(
+                rpctransport,
+                target_ip=target_ip,
+                port=port,
+                set_dport=not is_tcp_pipe,
                 username=username,
                 password=password,
                 domain=domain,
                 lmhash=lmhash,
                 nthash=nthash,
+                do_kerberos=do_kerberos,
+                dc_host=dc_host,
             )
-
-        if do_kerberos:
-            rpctransport.set_kerberos(True, kdcHost=dc_host)
 
         dce = rpctransport.get_dce_rpc()
 

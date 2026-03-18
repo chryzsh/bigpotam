@@ -134,7 +134,7 @@ When `-all` is not set, methods are tried in this order (most reliable first):
 
 ## Features
 
-- **EFS auto-activation**: Queries EPM on port 135 before EFSR attempts to wake up the EFS service on-demand
+- **EFS auto-activation**: Probes `\PIPE\efsrpc` and `\PIPE\lsarpc` over SMB first, then falls back to EPM/135 when needed
 - **Stop on first success**: Default behavior, use `-all` to enumerate everything
 - **WebDAV support**: Use `-listener-port 80` to generate `\\host@80/path` UNC paths for WebClient coercion
 - **Per-method error code checking**: Each protocol checks specific error codes (ERROR_BAD_NETPATH, rpc_s_access_denied, etc.) rather than catching all exceptions

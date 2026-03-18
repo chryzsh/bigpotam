@@ -361,10 +361,14 @@ def run(args):
         else:
             # EFS activation (once per target)
             if method.get("requires_efs_activation") and not efs_activated:
-                log.info("Activating EFS service via EPM...")
+                log.info("Activating EFS service...")
+                activation_kw = dict(auth_kw)
+                activation_kw["timeout"] = min(args.timeout, 2)
                 activate_efs(
-                    target_ip or address,
-                    timeout=min(args.timeout, 2),
+                    address,
+                    target_ip=target_ip,
+                    port=args.port,
+                    **activation_kw,
                 )
                 efs_activated = True
 
