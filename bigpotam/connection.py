@@ -13,6 +13,10 @@ from impacket.uuid import uuidtup_to_bin
 log = logging.getLogger("bigpotam")
 
 
+def _is_tcp_pipe(pipe):
+    return pipe in {"tcp_lsarpc", "tcp_efsr"}
+
+
 def activate_efs(target, timeout=2):
     """Poke EPM on port 135 to trigger on-demand EFS service start.
 
@@ -50,6 +54,7 @@ def connect_rpc(
     uuid_tuple,
     target_ip=None,
     port=445,
+    tcp_port=None,
     username="",
     password="",
     domain="",
@@ -66,19 +71,25 @@ def connect_rpc(
     """
     try:
         uuid_bin = uuidtup_to_bin(uuid_tuple)
+        is_tcp_pipe = _is_tcp_pipe(pipe)
 
         if use_epm:
             string_binding = get_dynamic_endpoint(uuid_bin, target, timeout)
+        elif is_tcp_pipe:
+            if tcp_port is None:
+                raise ValueError(f"tcp_port is required for {pipe}")
+            string_binding = rf"ncacn_ip_tcp:{target}[{tcp_port}]"
         else:
             string_binding = rf"ncacn_np:{target}[\PIPE\{pipe}]"
 
         rpctransport = transport.DCERPCTransportFactory(string_binding)
         rpctransport.set_connect_timeout(timeout)
 
-        if not use_epm:
+        if not use_epm and not is_tcp_pipe:
             rpctransport.set_dport(port)
-            if target_ip:
-                rpctransport.setRemoteHost(target_ip)
+
+        if target_ip:
+            rpctransport.setRemoteHost(target_ip)
 
         if hasattr(rpctransport, "set_credentials"):
             rpctransport.set_credentials(

