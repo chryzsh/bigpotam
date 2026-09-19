@@ -219,6 +219,7 @@ def _try_dcom(method, args, target_ip, address, auth_kw):
     ok = trigger_update_session(
         target_ip or address,
         args.listener,
+        listener_port=args.listener_port,
         **auth_kw,
     )
     _log_result(log, method, None, ok)

