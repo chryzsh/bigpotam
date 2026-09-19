@@ -14,16 +14,7 @@ from impacket.dcerpc.v5.dcom.oaut import (
     string_to_bin,
 )
 from impacket.dcerpc.v5.dcomrt import (
-    FLAGS_OBJREF_CUSTOM,
-    FLAGS_OBJREF_EXTENDED,
-    FLAGS_OBJREF_HANDLER,
-    FLAGS_OBJREF_STANDARD,
     INTERFACE,
-    OBJREF,
-    OBJREF_CUSTOM,
-    OBJREF_EXTENDED,
-    OBJREF_HANDLER,
-    OBJREF_STANDARD,
     DCOMConnection,
     IRemUnknown2,
 )
@@ -33,26 +24,15 @@ log = logging.getLogger("bigpotam")
 
 UPDATESESSION_CLSID = "4CB43D7F-7EEE-4906-8698-60DA1C38F2FE"
 
-_OBJREF_PARSERS = {
-    FLAGS_OBJREF_CUSTOM: OBJREF_CUSTOM,
-    FLAGS_OBJREF_HANDLER: OBJREF_HANDLER,
-    FLAGS_OBJREF_STANDARD: OBJREF_STANDARD,
-    FLAGS_OBJREF_EXTENDED: OBJREF_EXTENDED,
-}
-
 
 def _get_interface(dispatch, data):
     """Extract IDispatch interface from variant result."""
     raw = b"".join(data)
-    objref = OBJREF(raw)
-    flags = objref["flags"]
 
-    parser = _OBJREF_PARSERS.get(flags)
-    if parser is not None:
-        objref = parser(raw)
-
+    # INTERFACE() parses the OBJREF header itself (process_interface()); it
+    # wants the raw bytes, not a pre-parsed OBJREF/OBJREF_STANDARD instance.
     return IRemUnknown2(
-        INTERFACE(dispatch.get_cinstance(), objref, target=dispatch.get_target()),
+        INTERFACE(dispatch.get_cinstance(), raw, target=dispatch.get_target()),
     )
 
 
