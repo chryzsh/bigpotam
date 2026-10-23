@@ -207,20 +207,19 @@ def connect_rpc(
         rpctransport = transport.DCERPCTransportFactory(string_binding)
         rpctransport.set_connect_timeout(timeout)
 
-        if not use_epm:
-            _set_transport_auth(
-                rpctransport,
-                target_ip=target_ip,
-                port=port,
-                set_dport=not is_tcp_pipe,
-                username=username,
-                password=password,
-                domain=domain,
-                lmhash=lmhash,
-                nthash=nthash,
-                do_kerberos=do_kerberos,
-                dc_host=dc_host,
-            )
+        _set_transport_auth(
+            rpctransport,
+            target_ip=target_ip,
+            port=port,
+            set_dport=not (is_tcp_pipe or use_epm),
+            username=username,
+            password=password,
+            domain=domain,
+            lmhash=lmhash,
+            nthash=nthash,
+            do_kerberos=do_kerberos,
+            dc_host=dc_host,
+        )
 
         dce = rpctransport.get_dce_rpc()
 

