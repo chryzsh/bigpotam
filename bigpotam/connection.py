@@ -1,6 +1,7 @@
 """RPC/DCOM connection helpers and EFS auto-activation."""
 
 import logging
+import time
 
 from impacket.dcerpc.v5 import epm, transport
 from impacket.dcerpc.v5.rpcrt import (
@@ -91,8 +92,10 @@ def _activate_efs_named_pipe(
         dce.disconnect()
         return True
     except DCERPCException as e:
+        # A rejected bind means the EFS interface is not listening, so the
+        # service is not running yet. Let the caller try the EPM fallback.
         log.debug("EFS activation via %s returned DCERPCException: %s", pipe, e)
-        return True
+        return False
     except Exception as e:
         log.debug("EFS activation via %s failed: %s", pipe, e)
         return False
@@ -133,6 +136,8 @@ def activate_efs(
         ):
             return
 
+    # The EPM lookup of the EFSR interface starts the service. The lookup
+    # itself usually fails with ept_s_not_registered because EFS is not up yet.
     EFS_UUID = uuidtup_to_bin(("df1941c5-fe89-4e79-bf10-463657acf44d", "0.0"))
     network_target = target_ip or target
     try:
@@ -144,8 +149,13 @@ def activate_efs(
         epm.hept_map(network_target, EFS_UUID, protocol="ncacn_ip_tcp", dce=dce)
         dce.disconnect()
     except Exception as e:
-        log.debug("EFS activation via EPM failed: %s", e)
-        pass
+        if "ept_s_not_registered" not in str(e):
+            log.debug("EFS activation via EPM failed: %s", e)
+            return
+        log.debug("EFS activation via EPM sent: %s", e)
+
+    # Give EFS time to start and register on the named pipes.
+    time.sleep(2)
 
 
 def get_dynamic_endpoint(interface_uuid, target, timeout=5):
