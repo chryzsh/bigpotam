@@ -13,6 +13,7 @@ from impacket.examples.utils import parse_target
 
 from bigpotam.connection import activate_efs, connect_rpc, connect_smb
 from bigpotam.logger import setup_logger, success
+from bigpotam.methods import UNCONFIRMED
 from bigpotam.methods.dcom import trigger_update_session
 from bigpotam.registry import METHODS
 from bigpotam.wsp import trigger_wsp
@@ -177,13 +178,17 @@ def parse_args():
 
 
 def _log_result(log, method, pipe_label, ok):
-    """Log success or failure for a method attempt."""
+    """Log success, unconfirmed, or failure for a method attempt."""
     proto, name = method["protocol"], method["name"]
     if pipe_label:
-        if ok:
+        if ok is UNCONFIRMED:
+            log.warning("  %s / %s via %s — unconfirmed", proto, name, pipe_label)
+        elif ok:
             success(log, "  %s / %s via %s — triggered!", proto, name, pipe_label)
         else:
             log.info("  %s / %s via %s — failed", proto, name, pipe_label)
+    elif ok is UNCONFIRMED:
+        log.warning("  %s / %s — unconfirmed", proto, name)
     elif ok:
         success(log, "  %s / %s — triggered!", proto, name)
     else:
@@ -227,7 +232,11 @@ def _try_dcom(method, args, target_ip, address, auth_kw):
 
 
 def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
-    """Handle standard DCE/RPC coercion methods. Returns True on success."""
+    """Handle standard DCE/RPC coercion methods.
+
+    Returns True on success, UNCONFIRMED when the result cannot prove a
+    callback, False otherwise.
+    """
     log = logging.getLogger("bigpotam")
 
     if method["protocol"] == "MS-EFSR" and args.efsr_pipe:
@@ -291,6 +300,8 @@ def _try_rpc(method, args, address, target_ip, auth_kw, failed_pipes):
             pass
 
         _log_result(log, method, pipe_label, ok)
+        if ok is UNCONFIRMED:
+            return UNCONFIRMED
         if ok:
             return True
 
@@ -337,6 +348,7 @@ def run(args):
 
     efs_activated = False
     successes = []
+    unconfirmed = []
     failed_pipes: set[tuple[str, str]] = set()
 
     for method in METHODS:
@@ -382,7 +394,9 @@ def run(args):
                 failed_pipes,
             )
 
-        if ok:
+        if ok is UNCONFIRMED:
+            unconfirmed.append(method)
+        elif ok:
             successes.append(method)
             if not args.try_all:
                 break
@@ -397,10 +411,17 @@ def run(args):
         )
         for m in successes:
             success(log, "  %s / %s", m["protocol"], m["name"])
-    else:
+    if unconfirmed:
+        log.warning(
+            "Callback unconfirmed for %d method(s), check the listener:",
+            len(unconfirmed),
+        )
+        for m in unconfirmed:
+            log.warning("  %s / %s", m["protocol"], m["name"])
+    if not successes and not unconfirmed:
         log.error("All coercion methods failed against %s", address)
 
-    return 0 if successes else 1
+    return 0 if successes or unconfirmed else 1
 
 
 def main():

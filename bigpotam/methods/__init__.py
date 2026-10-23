@@ -1,5 +1,9 @@
 """Coercion method trigger functions."""
 
+# Returned by a trigger when the call result fits a coercion but does not prove
+# that the target connected out. Unlike True, it does not stop the run.
+UNCONFIRMED = "unconfirmed"
+
 
 def check_error(e, error_codes, error_strings):
     """Check if a DCE/RPC exception indicates coercion success.

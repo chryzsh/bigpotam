@@ -169,7 +169,7 @@ Default mode (stop-on-first-success) tries methods in this order:
 ## How It Works
 
 - **EFS auto-activation**: Probes `\PIPE\efsrpc` and `\PIPE\lsarpc` over SMB first, then falls back to EPM/135 to wake up the EFS service before attempting EFSR coercion
-- **Stop on first success**: Default behavior -- use `-all` to enumerate everything
+- **Stop on first success**: Default behavior -- use `-all` to enumerate everything. Results marked "unconfirmed" do not stop the run, see the MS-EFSR note below
 - **WebDAV support**: `-listener-port 80` generates `\\host@80/path` UNC paths for WebClient coercion
 - **Per-method error checking**: Each protocol checks specific Windows error codes (ERROR_BAD_NETPATH, rpc_s_access_denied, etc.) rather than catching all exceptions
 - **Failed pipe tracking**: Skips pipes that already failed to connect
@@ -181,6 +181,7 @@ Default mode (stop-on-first-success) tries methods in this order:
 - **MS-WSP** uses `file:////listener/share` with forward slashes, binary protocol over SMB (not DCE/RPC)
 - **DCOM UpdateSession** connects via port 135/DCOM, not named pipes -- coerces the **machine account**, not a user session
 - **MS-RPRN** requires an `RpcOpenPrinter` handle before calling notification functions
+- **MS-EFSR after the October 2026 update**: patched hosts return ERROR_BAD_NETPATH (0x35) at once, without connecting out, over both SMB and WebDAV paths. Unpatched hosts return the same code and do connect. bigpotam reports this result as unconfirmed and keeps going, so check your listener to know if the coercion worked. See [p0dalirius/Coercer#110](https://github.com/p0dalirius/Coercer/issues/110)
 - **EFSR UUID varies by transport**: `efsrpc` and `tcp_efsr` use `df1941c5-...`, all others use `c681d488-...`
 
 ## Credits

